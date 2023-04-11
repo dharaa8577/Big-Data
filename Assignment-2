@@ -1,0 +1,26 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import max, desc
+
+# Create a SparkSession
+spark = SparkSession.builder.appName('TopRatedMoviesAndShows').getOrCreate()
+# Load the movies CSV file into a DataFrame
+movies_df = spark.read.csv('C:/Users/dhara/Downloads/raw_credits.csv', header=True, inferSchema=True)
+
+# Load the TV shows CSV file into a DataFrame
+tv_shows_df = spark.read.csv('C:/Users/dhara/Downloads/raw_titles.csv', header=True, inferSchema=True)
+
+# Compute the top-rated movies and their actors by year
+movies_grouped_by_year = movies_df.groupBy("Year")
+max_movie_ratings_by_year = movies_grouped_by_year.agg(max("Rating").alias("MaxMovieRating"))
+top_rated_movies = movies_df.join(max_movie_ratings_by_year, ["Year", "Rating"]).orderBy(desc("Year"))
+top_rated_movies_with_actor = top_rated_movies.select("Year", "Title", "Rating", "Actor")
+
+# Compute the top-rated TV shows and their actors by year
+tv_shows_grouped_by_year = tv_shows_df.groupBy("Year")
+max_tv_show_ratings_by_year = tv_shows_grouped_by_year.agg(max("Rating").alias("MaxTVShowRating"))
+top_rated_tv_shows = tv_shows_df.join(max_tv_show_ratings_by_year, ["Year", "Rating"]).orderBy(desc("Year"))
+top_rated_tv_shows_with_actor = top_rated_tv_shows.select("Year", "Title", "Rating", "Actor")
+
+# Join the top-rated movies and TV shows by year and display the results
+top_rated_movies_and_shows = top_rated_movies_with_actor.join(top_rated_tv_shows_with_actor, ["Year"]).orderBy(desc("Year"))
+top_rated_movies_and_shows.show()
